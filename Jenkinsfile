@@ -67,17 +67,14 @@ pipeline {
                     java -version || true
 
                     echo "Check hdfs:"
-                    ls -l /usr/bin/hdfs || true
                     which hdfs || true
                     command -v hdfs || true
 
                     echo "Check sqoop:"
-                    ls -l /usr/bin/sqoop || true
                     which sqoop || true
                     command -v sqoop || true
 
                     echo "Check spark-submit:"
-                    ls -l /usr/local/bin/spark-submit || true
                     which spark-submit || true
                     command -v spark-submit || true
                 '''
@@ -93,12 +90,12 @@ pipeline {
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
                     export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
 
-                    /usr/bin/hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
-                    /usr/bin/hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
+                    hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
+                    hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
 
-                    /usr/bin/sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
+                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
 
-                    /usr/bin/sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
+                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
                 '''
             }
         }
@@ -113,7 +110,7 @@ pipeline {
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
                         export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
                         export SPARK_LOCAL_IP=127.0.0.1
-                        /usr/local/bin/spark-submit bronze_to_silver_full.py
+                        spark-submit bronze_to_silver_full.py
                     '''
                 }
             }
@@ -128,8 +125,8 @@ pipeline {
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
                     export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
 
-                    /usr/bin/hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
-                    /usr/bin/hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
+                    hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
+                    hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
                 '''
             }
         }
@@ -143,8 +140,8 @@ pipeline {
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
                     export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
 
-                    /usr/bin/hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
-                    /usr/bin/hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
+                    hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
+                    hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
                 '''
             }
         }
@@ -159,7 +156,7 @@ pipeline {
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
                         export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
                         export SPARK_LOCAL_IP=127.0.0.1
-                        /usr/local/bin/spark-submit incremental_silver_merge.py
+                        spark-submit incremental_silver_merge.py
                     '''
                 }
             }
@@ -172,7 +169,7 @@ pipeline {
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
                         export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
                         export SPARK_LOCAL_IP=127.0.0.1
-                        /usr/local/bin/spark-submit silver_to_gold.py
+                        spark-submit silver_to_gold.py
                     '''
                 }
             }

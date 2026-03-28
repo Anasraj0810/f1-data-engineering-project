@@ -32,6 +32,7 @@ pipeline {
                         export HADOOP_CONF_DIR=/etc/hadoop/conf
                         export SPARK_CONF_DIR=/etc/spark/conf
                         export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
+
                         python3 -m pip install --user -r requirements.txt
                     '''
                 }
@@ -58,29 +59,27 @@ pipeline {
             }
         }
 
-        stage('Diagnose Direct Tool Paths') {
+        stage('Debug Runtime Host') {
             steps {
                 sh '''
-                    echo "USER:"
-                    whoami
+                    echo "USER=$(whoami)"
+                    echo "HOST=$(hostname)"
+                    echo "PWD=$(pwd)"
+                    echo "PATH=$PATH"
 
-                    echo "JAVA:"
-                    $JAVA_HOME/bin/java -version || true
+                    echo "Checking tool paths..."
+                    ls -l /opt/cloudera/parcels/CDH/bin/hdfs || true
+                    ls -l /opt/cloudera/parcels/CDH/bin/sqoop || true
+                    ls -l /opt/cloudera/parcels/CDH/bin/spark-submit || true
 
-                    echo "HADOOP_CONF_DIR:"
-                    echo $HADOOP_CONF_DIR
+                    echo "Which commands..."
+                    which hdfs || true
+                    which sqoop || true
+                    which spark-submit || true
 
-                    echo "SPARK_CONF_DIR:"
-                    echo $SPARK_CONF_DIR
-
-                    echo "Direct hdfs:"
-                    /opt/cloudera/parcels/CDH/bin/hdfs version || true
-
-                    echo "Direct sqoop:"
-                    /opt/cloudera/parcels/CDH/bin/sqoop version || true
-
-                    echo "Direct spark-submit:"
-                    /opt/cloudera/parcels/CDH/bin/spark-submit --version || true
+                    echo "HDFS file info..."
+                    file /opt/cloudera/parcels/CDH/bin/hdfs || true
+                    head -n 1 /opt/cloudera/parcels/CDH/bin/hdfs || true
                 '''
             }
         }
@@ -96,12 +95,37 @@ pipeline {
                     export SPARK_CONF_DIR=/etc/spark/conf
                     export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
+                    echo "Running on $(hostname) as $(whoami)"
+                    ls -l /opt/cloudera/parcels/CDH/bin/hdfs
+                    ls -l /opt/cloudera/parcels/CDH/bin/sqoop
+
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/races/full/
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/results/full/
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/drivers/full/
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/constructors/full/
+
                     /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
                     /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
 
-                    /opt/cloudera/parcels/CDH/bin/sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
+                    /opt/cloudera/parcels/CDH/bin/sqoop import \
+                      --connect jdbc:postgresql://13.42.152.118:5432/testdb \
+                      --username admin \
+                      --password admin123 \
+                      --driver org.postgresql.Driver \
+                      --table anas.drivers_full_v \
+                      --target-dir /tmp/anas_proj2/bronze/drivers/full \
+                      --delete-target-dir \
+                      -m 1
 
-                    /opt/cloudera/parcels/CDH/bin/sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
+                    /opt/cloudera/parcels/CDH/bin/sqoop import \
+                      --connect jdbc:postgresql://13.42.152.118:5432/testdb \
+                      --username admin \
+                      --password admin123 \
+                      --driver org.postgresql.Driver \
+                      --table anas.constructors_full_v \
+                      --target-dir /tmp/anas_proj2/bronze/constructors/full \
+                      --delete-target-dir \
+                      -m 1
                 '''
             }
         }
@@ -135,6 +159,9 @@ pipeline {
                     export HADOOP_CONF_DIR=/etc/hadoop/conf
                     export SPARK_CONF_DIR=/etc/spark/conf
                     export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
+
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/races/incremental/
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/results/incremental/
 
                     /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
                     /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/

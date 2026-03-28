@@ -119,7 +119,7 @@ pipeline {
                         export SPARK_LOCAL_IP=127.0.0.1
                         export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                        /opt/cloudera/parcels/CDH/bin/spark-submit bronze_to_silver_full.py
+                        /opt/cloudera/parcels/CDH/bin/spark-submit bronze_to_silver_full2.py
                     '''
                 }
             }
@@ -172,7 +172,7 @@ pipeline {
                         export SPARK_LOCAL_IP=127.0.0.1
                         export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                        /opt/cloudera/parcels/CDH/bin/spark-submit incremental_silver_merge.py
+                        /opt/cloudera/parcels/CDH/bin/spark-submit incremental_silver_merge2.py
                     '''
                 }
             }
@@ -188,7 +188,7 @@ pipeline {
                         export SPARK_LOCAL_IP=127.0.0.1
                         export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                        /opt/cloudera/parcels/CDH/bin/spark-submit silver_to_gold.py
+                        /opt/cloudera/parcels/CDH/bin/spark-submit silver_to_gold2.py
                     '''
                 }
             }

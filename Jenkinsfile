@@ -51,6 +51,39 @@ pipeline {
             }
         }
 
+        stage('Diagnose Hadoop Tools') {
+            steps {
+                sh '''
+                    echo "USER:"
+                    whoami
+
+                    echo "PWD:"
+                    pwd
+
+                    echo "PATH:"
+                    echo $PATH
+
+                    echo "JAVA:"
+                    java -version || true
+
+                    echo "Check hdfs:"
+                    ls -l /usr/bin/hdfs || true
+                    which hdfs || true
+                    command -v hdfs || true
+
+                    echo "Check sqoop:"
+                    ls -l /usr/bin/sqoop || true
+                    which sqoop || true
+                    command -v sqoop || true
+
+                    echo "Check spark-submit:"
+                    ls -l /usr/local/bin/spark-submit || true
+                    which spark-submit || true
+                    command -v spark-submit || true
+                '''
+            }
+        }
+
         stage('Load Full Bronze Data') {
             when {
                 expression { params.LOAD_TYPE == 'FULL' }

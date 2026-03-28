@@ -12,6 +12,7 @@ pipeline {
     environment {
         JAVA_HOME = '/usr/java/jdk1.8.0_232-cloudera'
         SPARK_LOCAL_IP = '127.0.0.1'
+        PATH = '/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin'
     }
 
     stages {
@@ -25,6 +26,8 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
+                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
                         python3 -m pip install --user -r requirements.txt
                     '''
                 }
@@ -36,7 +39,7 @@ pipeline {
                 dir('code/code_final') {
                     sh '''
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=$JAVA_HOME/bin:$PATH
+                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
                         export SPARK_LOCAL_IP=127.0.0.1
                         export PYSPARK_PYTHON=python3
                         export PYSPARK_DRIVER_PYTHON=python3
@@ -54,12 +57,15 @@ pipeline {
             }
             steps {
                 sh '''
-                    hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
-                    hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
+                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
 
-                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
+                    /usr/bin/hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
+                    /usr/bin/hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
 
-                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
+                    /usr/bin/sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
+
+                    /usr/bin/sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
                 '''
             }
         }
@@ -72,9 +78,9 @@ pipeline {
                 dir('code/code_final') {
                     sh '''
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=$JAVA_HOME/bin:$PATH
+                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
                         export SPARK_LOCAL_IP=127.0.0.1
-                        spark-submit bronze_to_silver_full.py
+                        /usr/local/bin/spark-submit bronze_to_silver_full.py
                     '''
                 }
             }
@@ -86,8 +92,11 @@ pipeline {
             }
             steps {
                 sh '''
-                    hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
-                    hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
+                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+
+                    /usr/bin/hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
+                    /usr/bin/hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
                 '''
             }
         }
@@ -98,8 +107,11 @@ pipeline {
             }
             steps {
                 sh '''
-                    hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
-                    hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
+                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+
+                    /usr/bin/hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
+                    /usr/bin/hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
                 '''
             }
         }
@@ -112,9 +124,9 @@ pipeline {
                 dir('code/code_final') {
                     sh '''
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=$JAVA_HOME/bin:$PATH
+                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
                         export SPARK_LOCAL_IP=127.0.0.1
-                        spark-submit incremental_silver_merge.py
+                        /usr/local/bin/spark-submit incremental_silver_merge.py
                     '''
                 }
             }
@@ -125,9 +137,9 @@ pipeline {
                 dir('code/code_final') {
                     sh '''
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=$JAVA_HOME/bin:$PATH
+                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
                         export SPARK_LOCAL_IP=127.0.0.1
-                        spark-submit silver_to_gold.py
+                        /usr/local/bin/spark-submit silver_to_gold.py
                     '''
                 }
             }

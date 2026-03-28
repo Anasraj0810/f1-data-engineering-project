@@ -10,7 +10,7 @@ pipeline {
     }
 
     environment {
-        JAVA_HOME = '/usr'
+        JAVA_HOME = '/usr/java/jdk1.8.0_232-cloudera'
         SPARK_LOCAL_IP = '127.0.0.1'
     }
 
@@ -35,8 +35,13 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
-                        export JAVA_HOME=$JAVA_HOME
-                        export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        export SPARK_LOCAL_IP=127.0.0.1
+                        export PYSPARK_PYTHON=python3
+                        export PYSPARK_DRIVER_PYTHON=python3
+                        java -version
+                        python3 -c "import pyspark; print(pyspark.__file__)"
                         python3 -m pytest -v
                     '''
                 }
@@ -66,8 +71,9 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
-                        export JAVA_HOME=$JAVA_HOME
-                        export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        export SPARK_LOCAL_IP=127.0.0.1
                         spark-submit bronze_to_silver_full.py
                     '''
                 }
@@ -105,8 +111,9 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
-                        export JAVA_HOME=$JAVA_HOME
-                        export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        export SPARK_LOCAL_IP=127.0.0.1
                         spark-submit incremental_silver_merge.py
                     '''
                 }
@@ -117,8 +124,9 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
-                        export JAVA_HOME=$JAVA_HOME
-                        export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        export SPARK_LOCAL_IP=127.0.0.1
                         spark-submit silver_to_gold.py
                     '''
                 }

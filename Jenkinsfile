@@ -10,8 +10,6 @@ pipeline {
     }
 
     environment {
-        PROJECT_DIR = '/home/ec2-user/250226batch/Anasraj/f1_proj_v2/code/code_final'
-        HDFS_ROOT = '/tmp/anas_proj2'
         JAVA_HOME = '/usr'
         SPARK_LOCAL_IP = '127.0.0.1'
     }
@@ -25,21 +23,23 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    cd $PROJECT_DIR
-                    python3 -m pip install --user -r requirements.txt
-                '''
+                dir('code/code_final') {
+                    sh '''
+                        python3 -m pip install --user -r requirements.txt
+                    '''
+                }
             }
         }
 
         stage('Run Pytest') {
             steps {
-                sh '''
-                    cd $PROJECT_DIR
-                    export JAVA_HOME=$JAVA_HOME
-                    export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
-                    python3 -m pytest -v
-                '''
+                dir('code/code_final') {
+                    sh '''
+                        export JAVA_HOME=$JAVA_HOME
+                        export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                        python3 -m pytest -v
+                    '''
+                }
             }
         }
 
@@ -49,8 +49,6 @@ pipeline {
             }
             steps {
                 sh '''
-                    cd /home/ec2-user/250226batch/Anasraj/f1_proj_v2
-
                     hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
                     hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
 
@@ -66,12 +64,13 @@ pipeline {
                 expression { params.LOAD_TYPE == 'FULL' }
             }
             steps {
-                sh '''
-                    cd $PROJECT_DIR
-                    export JAVA_HOME=$JAVA_HOME
-                    export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
-                    spark-submit bronze_to_silver_full.py
-                '''
+                dir('code/code_final') {
+                    sh '''
+                        export JAVA_HOME=$JAVA_HOME
+                        export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                        spark-submit bronze_to_silver_full.py
+                    '''
+                }
             }
         }
 
@@ -81,8 +80,6 @@ pipeline {
             }
             steps {
                 sh '''
-                    cd /home/ec2-user/250226batch/Anasraj/f1_proj_v2
-
                     hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
                     hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
                 '''
@@ -106,23 +103,25 @@ pipeline {
                 expression { params.LOAD_TYPE == 'INCREMENTAL' }
             }
             steps {
-                sh '''
-                    cd $PROJECT_DIR
-                    export JAVA_HOME=$JAVA_HOME
-                    export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
-                    spark-submit incremental_silver_merge.py
-                '''
+                dir('code/code_final') {
+                    sh '''
+                        export JAVA_HOME=$JAVA_HOME
+                        export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                        spark-submit incremental_silver_merge.py
+                    '''
+                }
             }
         }
 
         stage('Refresh Gold') {
             steps {
-                sh '''
-                    cd $PROJECT_DIR
-                    export JAVA_HOME=$JAVA_HOME
-                    export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
-                    spark-submit silver_to_gold.py
-                '''
+                dir('code/code_final') {
+                    sh '''
+                        export JAVA_HOME=$JAVA_HOME
+                        export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                        spark-submit silver_to_gold.py
+                    '''
+                }
             }
         }
     }

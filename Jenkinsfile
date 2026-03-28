@@ -12,7 +12,6 @@ pipeline {
     environment {
         JAVA_HOME = '/usr/java/jdk1.8.0_232-cloudera'
         SPARK_LOCAL_IP = '127.0.0.1'
-        PATH = '/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin'
     }
 
     stages {
@@ -26,9 +25,11 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
+                        bash -lc '
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+                        export PATH=$JAVA_HOME/bin:$PATH
                         python3 -m pip install --user -r requirements.txt
+                        '
                     '''
                 }
             }
@@ -38,14 +39,16 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
+                        bash -lc '
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+                        export PATH=$JAVA_HOME/bin:$PATH
                         export SPARK_LOCAL_IP=127.0.0.1
                         export PYSPARK_PYTHON=python3
                         export PYSPARK_DRIVER_PYTHON=python3
                         java -version
                         python3 -c "import pyspark; print(pyspark.__file__)"
                         python3 -m pytest -v
+                        '
                     '''
                 }
             }
@@ -54,6 +57,14 @@ pipeline {
         stage('Diagnose Hadoop Tools') {
             steps {
                 sh '''
+                    bash -lc '
+                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                    export PATH=$JAVA_HOME/bin:$PATH
+
+                    [ -f /etc/profile ] && . /etc/profile || true
+                    [ -f ~/.bash_profile ] && . ~/.bash_profile || true
+                    [ -f ~/.bashrc ] && . ~/.bashrc || true
+
                     echo "USER:"
                     whoami
 
@@ -67,16 +78,14 @@ pipeline {
                     java -version || true
 
                     echo "Check hdfs:"
-                    which hdfs || true
                     command -v hdfs || true
 
                     echo "Check sqoop:"
-                    which sqoop || true
                     command -v sqoop || true
 
                     echo "Check spark-submit:"
-                    which spark-submit || true
                     command -v spark-submit || true
+                    '
                 '''
             }
         }
@@ -87,15 +96,27 @@ pipeline {
             }
             steps {
                 sh '''
+                    bash -lc '
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+                    export PATH=$JAVA_HOME/bin:$PATH
 
-                    hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
-                    hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
+                    [ -f /etc/profile ] && . /etc/profile || true
+                    [ -f ~/.bash_profile ] && . ~/.bash_profile || true
+                    [ -f ~/.bashrc ] && . ~/.bashrc || true
 
-                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
+                    HDFS_CMD=$(command -v hdfs)
+                    SQOOP_CMD=$(command -v sqoop)
 
-                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
+                    [ -z "$HDFS_CMD" ] && echo "hdfs not found in Jenkins environment" && exit 1
+                    [ -z "$SQOOP_CMD" ] && echo "sqoop not found in Jenkins environment" && exit 1
+
+                    "$HDFS_CMD" dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
+                    "$HDFS_CMD" dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
+
+                    "$SQOOP_CMD" import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
+
+                    "$SQOOP_CMD" import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
+                    '
                 '''
             }
         }
@@ -107,10 +128,20 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
+                        bash -lc '
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+                        export PATH=$JAVA_HOME/bin:$PATH
                         export SPARK_LOCAL_IP=127.0.0.1
-                        spark-submit bronze_to_silver_full.py
+
+                        [ -f /etc/profile ] && . /etc/profile || true
+                        [ -f ~/.bash_profile ] && . ~/.bash_profile || true
+                        [ -f ~/.bashrc ] && . ~/.bashrc || true
+
+                        SPARK_CMD=$(command -v spark-submit)
+                        [ -z "$SPARK_CMD" ] && echo "spark-submit not found in Jenkins environment" && exit 1
+
+                        "$SPARK_CMD" bronze_to_silver_full.py
+                        '
                     '''
                 }
             }
@@ -122,11 +153,20 @@ pipeline {
             }
             steps {
                 sh '''
+                    bash -lc '
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+                    export PATH=$JAVA_HOME/bin:$PATH
 
-                    hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
-                    hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
+                    [ -f /etc/profile ] && . /etc/profile || true
+                    [ -f ~/.bash_profile ] && . ~/.bash_profile || true
+                    [ -f ~/.bashrc ] && . ~/.bashrc || true
+
+                    HDFS_CMD=$(command -v hdfs)
+                    [ -z "$HDFS_CMD" ] && echo "hdfs not found in Jenkins environment" && exit 1
+
+                    "$HDFS_CMD" dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
+                    "$HDFS_CMD" dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
+                    '
                 '''
             }
         }
@@ -137,11 +177,20 @@ pipeline {
             }
             steps {
                 sh '''
+                    bash -lc '
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+                    export PATH=$JAVA_HOME/bin:$PATH
 
-                    hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
-                    hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
+                    [ -f /etc/profile ] && . /etc/profile || true
+                    [ -f ~/.bash_profile ] && . ~/.bash_profile || true
+                    [ -f ~/.bashrc ] && . ~/.bashrc || true
+
+                    HDFS_CMD=$(command -v hdfs)
+                    [ -z "$HDFS_CMD" ] && echo "hdfs not found in Jenkins environment" && exit 1
+
+                    "$HDFS_CMD" dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
+                    "$HDFS_CMD" dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
+                    '
                 '''
             }
         }
@@ -153,10 +202,20 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
+                        bash -lc '
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+                        export PATH=$JAVA_HOME/bin:$PATH
                         export SPARK_LOCAL_IP=127.0.0.1
-                        spark-submit incremental_silver_merge.py
+
+                        [ -f /etc/profile ] && . /etc/profile || true
+                        [ -f ~/.bash_profile ] && . ~/.bash_profile || true
+                        [ -f ~/.bashrc ] && . ~/.bashrc || true
+
+                        SPARK_CMD=$(command -v spark-submit)
+                        [ -z "$SPARK_CMD" ] && echo "spark-submit not found in Jenkins environment" && exit 1
+
+                        "$SPARK_CMD" incremental_silver_merge.py
+                        '
                     '''
                 }
             }
@@ -166,10 +225,20 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
+                        bash -lc '
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=/usr/local/bin:/usr/bin:/bin:/usr/java/jdk1.8.0_232-cloudera/bin
+                        export PATH=$JAVA_HOME/bin:$PATH
                         export SPARK_LOCAL_IP=127.0.0.1
-                        spark-submit silver_to_gold.py
+
+                        [ -f /etc/profile ] && . /etc/profile || true
+                        [ -f ~/.bash_profile ] && . ~/.bash_profile || true
+                        [ -f ~/.bashrc ] && . ~/.bashrc || true
+
+                        SPARK_CMD=$(command -v spark-submit)
+                        [ -z "$SPARK_CMD" ] && echo "spark-submit not found in Jenkins environment" && exit 1
+
+                        "$SPARK_CMD" silver_to_gold.py
+                        '
                     '''
                 }
             }

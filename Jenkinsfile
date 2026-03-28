@@ -12,6 +12,9 @@ pipeline {
     environment {
         JAVA_HOME = '/usr/java/jdk1.8.0_232-cloudera'
         SPARK_LOCAL_IP = '127.0.0.1'
+        HADOOP_CONF_DIR = '/etc/hadoop/conf'
+        SPARK_CONF_DIR = '/etc/spark/conf'
+        PATH = '/opt/cloudera/parcels/CDH/bin:/usr/java/jdk1.8.0_232-cloudera/bin:/usr/local/bin:/usr/bin:/bin'
     }
 
     stages {
@@ -25,11 +28,11 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
-                        bash -lc '
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=$JAVA_HOME/bin:$PATH
+                        export HADOOP_CONF_DIR=/etc/hadoop/conf
+                        export SPARK_CONF_DIR=/etc/spark/conf
+                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
                         python3 -m pip install --user -r requirements.txt
-                        '
                     '''
                 }
             }
@@ -39,46 +42,45 @@ pipeline {
             steps {
                 dir('code/code_final') {
                     sh '''
-                        bash -lc '
                         export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export PATH=$JAVA_HOME/bin:$PATH
+                        export HADOOP_CONF_DIR=/etc/hadoop/conf
+                        export SPARK_CONF_DIR=/etc/spark/conf
                         export SPARK_LOCAL_IP=127.0.0.1
                         export PYSPARK_PYTHON=python3
                         export PYSPARK_DRIVER_PYTHON=python3
+                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
+
                         java -version
                         python3 -c "import pyspark; print(pyspark.__file__)"
                         python3 -m pytest -v
-                        '
                     '''
                 }
             }
         }
 
-        stage('Diagnose Hadoop Tools via ec2-user') {
+        stage('Diagnose Direct Tool Paths') {
             steps {
                 sh '''
-                    sudo -u ec2-user -H bash -lc '
                     echo "USER:"
                     whoami
 
-                    echo "HOSTNAME:"
-                    hostname
-
-                    echo "PWD:"
-                    pwd
-
                     echo "JAVA:"
-                    java -version || true
+                    $JAVA_HOME/bin/java -version || true
 
-                    echo "Check hdfs:"
-                    which hdfs || true
+                    echo "HADOOP_CONF_DIR:"
+                    echo $HADOOP_CONF_DIR
 
-                    echo "Check sqoop:"
-                    which sqoop || true
+                    echo "SPARK_CONF_DIR:"
+                    echo $SPARK_CONF_DIR
 
-                    echo "Check spark-submit:"
-                    which spark-submit || true
-                    '
+                    echo "Direct hdfs:"
+                    /opt/cloudera/parcels/CDH/bin/hdfs version || true
+
+                    echo "Direct sqoop:"
+                    /opt/cloudera/parcels/CDH/bin/sqoop version || true
+
+                    echo "Direct spark-submit:"
+                    /opt/cloudera/parcels/CDH/bin/spark-submit --version || true
                 '''
             }
         }
@@ -89,19 +91,17 @@ pipeline {
             }
             steps {
                 sh '''
-                    sudo -u ec2-user -H bash -lc '
-                    cd /var/lib/jenkins/workspace/f1-batch-pipeline
-
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=$JAVA_HOME/bin:$PATH
+                    export HADOOP_CONF_DIR=/etc/hadoop/conf
+                    export SPARK_CONF_DIR=/etc/spark/conf
+                    export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                    hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
-                    hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
 
-                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
+                    /opt/cloudera/parcels/CDH/bin/sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
 
-                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
-                    '
+                    /opt/cloudera/parcels/CDH/bin/sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
                 '''
             }
         }
@@ -111,17 +111,17 @@ pipeline {
                 expression { params.LOAD_TYPE == 'FULL' }
             }
             steps {
-                sh '''
-                    sudo -u ec2-user -H bash -lc '
-                    cd /var/lib/jenkins/workspace/f1-batch-pipeline/code/code_final
+                dir('code/code_final') {
+                    sh '''
+                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                        export HADOOP_CONF_DIR=/etc/hadoop/conf
+                        export SPARK_CONF_DIR=/etc/spark/conf
+                        export SPARK_LOCAL_IP=127.0.0.1
+                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=$JAVA_HOME/bin:$PATH
-                    export SPARK_LOCAL_IP=127.0.0.1
-
-                    spark-submit bronze_to_silver_full.py
-                    '
-                '''
+                        /opt/cloudera/parcels/CDH/bin/spark-submit bronze_to_silver_full.py
+                    '''
+                }
             }
         }
 
@@ -131,15 +131,13 @@ pipeline {
             }
             steps {
                 sh '''
-                    sudo -u ec2-user -H bash -lc '
-                    cd /var/lib/jenkins/workspace/f1-batch-pipeline
-
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=$JAVA_HOME/bin:$PATH
+                    export HADOOP_CONF_DIR=/etc/hadoop/conf
+                    export SPARK_CONF_DIR=/etc/spark/conf
+                    export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                    hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
-                    hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
-                    '
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
                 '''
             }
         }
@@ -150,13 +148,13 @@ pipeline {
             }
             steps {
                 sh '''
-                    sudo -u ec2-user -H bash -lc '
                     export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=$JAVA_HOME/bin:$PATH
+                    export HADOOP_CONF_DIR=/etc/hadoop/conf
+                    export SPARK_CONF_DIR=/etc/spark/conf
+                    export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                    hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
-                    hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
-                    '
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
+                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
                 '''
             }
         }
@@ -166,33 +164,33 @@ pipeline {
                 expression { params.LOAD_TYPE == 'INCREMENTAL' }
             }
             steps {
-                sh '''
-                    sudo -u ec2-user -H bash -lc '
-                    cd /var/lib/jenkins/workspace/f1-batch-pipeline/code/code_final
+                dir('code/code_final') {
+                    sh '''
+                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                        export HADOOP_CONF_DIR=/etc/hadoop/conf
+                        export SPARK_CONF_DIR=/etc/spark/conf
+                        export SPARK_LOCAL_IP=127.0.0.1
+                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=$JAVA_HOME/bin:$PATH
-                    export SPARK_LOCAL_IP=127.0.0.1
-
-                    spark-submit incremental_silver_merge.py
-                    '
-                '''
+                        /opt/cloudera/parcels/CDH/bin/spark-submit incremental_silver_merge.py
+                    '''
+                }
             }
         }
 
         stage('Refresh Gold') {
             steps {
-                sh '''
-                    sudo -u ec2-user -H bash -lc '
-                    cd /var/lib/jenkins/workspace/f1-batch-pipeline/code/code_final
+                dir('code/code_final') {
+                    sh '''
+                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
+                        export HADOOP_CONF_DIR=/etc/hadoop/conf
+                        export SPARK_CONF_DIR=/etc/spark/conf
+                        export SPARK_LOCAL_IP=127.0.0.1
+                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
 
-                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export PATH=$JAVA_HOME/bin:$PATH
-                    export SPARK_LOCAL_IP=127.0.0.1
-
-                    spark-submit silver_to_gold.py
-                    '
-                '''
+                        /opt/cloudera/parcels/CDH/bin/spark-submit silver_to_gold.py
+                    '''
+                }
             }
         }
     }

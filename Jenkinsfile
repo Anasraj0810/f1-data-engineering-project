@@ -1,0 +1,138 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(
+            name: 'LOAD_TYPE',
+            choices: ['FULL', 'INCREMENTAL'],
+            description: 'Choose which batch pipeline to run'
+        )
+    }
+
+    environment {
+        PROJECT_DIR = '/home/ec2-user/250226batch/Anasraj/f1_proj_v2/code/code_final'
+        HDFS_ROOT = '/tmp/anas_proj2'
+        JAVA_HOME = '/usr'
+        SPARK_LOCAL_IP = '127.0.0.1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    cd $PROJECT_DIR
+                    python3 -m pip install --user -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Run Pytest') {
+            steps {
+                sh '''
+                    cd $PROJECT_DIR
+                    export JAVA_HOME=$JAVA_HOME
+                    export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                    python3 -m pytest -v
+                '''
+            }
+        }
+
+        stage('Load Full Bronze Data') {
+            when {
+                expression { params.LOAD_TYPE == 'FULL' }
+            }
+            steps {
+                sh '''
+                    cd /home/ec2-user/250226batch/Anasraj/f1_proj_v2
+
+                    hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
+                    hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
+
+                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1
+
+                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1
+                '''
+            }
+        }
+
+        stage('Run Full Silver Build') {
+            when {
+                expression { params.LOAD_TYPE == 'FULL' }
+            }
+            steps {
+                sh '''
+                    cd $PROJECT_DIR
+                    export JAVA_HOME=$JAVA_HOME
+                    export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                    spark-submit bronze_to_silver_full.py
+                '''
+            }
+        }
+
+        stage('Load Incremental Bronze Data') {
+            when {
+                expression { params.LOAD_TYPE == 'INCREMENTAL' }
+            }
+            steps {
+                sh '''
+                    cd /home/ec2-user/250226batch/Anasraj/f1_proj_v2
+
+                    hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
+                    hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
+                '''
+            }
+        }
+
+        stage('Validate Base Silver Exists') {
+            when {
+                expression { params.LOAD_TYPE == 'INCREMENTAL' }
+            }
+            steps {
+                sh '''
+                    hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
+                    hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
+                '''
+            }
+        }
+
+        stage('Run Incremental Silver Merge') {
+            when {
+                expression { params.LOAD_TYPE == 'INCREMENTAL' }
+            }
+            steps {
+                sh '''
+                    cd $PROJECT_DIR
+                    export JAVA_HOME=$JAVA_HOME
+                    export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                    spark-submit incremental_silver_merge.py
+                '''
+            }
+        }
+
+        stage('Refresh Gold') {
+            steps {
+                sh '''
+                    cd $PROJECT_DIR
+                    export JAVA_HOME=$JAVA_HOME
+                    export SPARK_LOCAL_IP=$SPARK_LOCAL_IP
+                    spark-submit silver_to_gold.py
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Jenkins batch pipeline completed successfully.'
+        }
+        failure {
+            echo 'Jenkins batch pipeline failed. Check console logs and pipeline log files.'
+        }
+    }
+}

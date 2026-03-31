@@ -1,0 +1,14 @@
+2026-03-29 10:31:30,246 | INFO | bronze_to_silver_full | Starting full bronze to silver job
+2026-03-29 10:31:36,492 | INFO | bronze_to_silver_full | Drivers bronze count: 861
+2026-03-29 10:31:36,607 | INFO | bronze_to_silver_full | Constructors bronze count: 212
+2026-03-29 10:31:36,732 | INFO | bronze_to_silver_full | Races bronze count: 901
+2026-03-29 10:31:36,859 | INFO | bronze_to_silver_full | Results bronze count: 22221
+2026-03-29 10:31:39,849 | INFO | bronze_to_silver_full | Drivers silver cleaned count: 861
+2026-03-29 10:31:40,142 | INFO | bronze_to_silver_full | Constructors silver cleaned count: 212
+2026-03-29 10:31:40,694 | INFO | bronze_to_silver_full | Races silver cleaned count: 901
+2026-03-29 10:31:41,498 | INFO | bronze_to_silver_full | Results silver cleaned count: 22221
+2026-03-29 10:31:41,562 | INFO | bronze_to_silver_full | Writing drivers silver
+2026-03-29 10:31:42,966 | INFO | bronze_to_silver_full | Writing constructors silver
+2026-03-29 10:31:43,281 | INFO | bronze_to_silver_full | Writing races silver partitioned by year
+2026-03-29 10:31:45,160 | INFO | bronze_to_silver_full | Writing results silver partitioned by year
+2026-03-29 10:31:47,440 | INFO | bronze_to_silver_full | Full bronze to silver job completed successfully

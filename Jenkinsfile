@@ -2,85 +2,47 @@ pipeline {
     agent any
 
     parameters {
-        choice(
-            name: 'LOAD_TYPE',
-            choices: ['FULL', 'INCREMENTAL'],
-            description: 'Choose which batch pipeline to run'
-        )
+        choice(name: 'LOAD_TYPE', choices: ['FULL', 'INCREMENTAL'], description: 'Choose load type')
     }
 
     environment {
-        JAVA_HOME = '/usr/java/jdk1.8.0_232-cloudera'
-        SPARK_LOCAL_IP = '127.0.0.1'
+        REMOTE_HOST = '13.41.167.97'
+        REMOTE_USER = 'ec2-user'
+        PROJECT_PATH = '/home/ec2-user/250226batch/Anasraj/f1_proj_v2'
+        CODE_PATH = '/home/ec2-user/250226batch/Anasraj/f1_proj_v2/code/code_final'
         HADOOP_CONF_DIR = '/etc/hadoop/conf'
-        SPARK_CONF_DIR = '/etc/spark/conf'
-        PATH = '/opt/cloudera/parcels/CDH/bin:/usr/java/jdk1.8.0_232-cloudera/bin:/usr/local/bin:/usr/bin:/bin'
+        YARN_CONF_DIR = '/etc/hadoop/conf'
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('Prepare') {
             steps {
-                checkout scm
+                echo 'Using Pipeline script from Jenkins UI'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                dir('code/code_final') {
-                    sh '''
-                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export HADOOP_CONF_DIR=/etc/hadoop/conf
-                        export SPARK_CONF_DIR=/etc/spark/conf
-                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
-
-                        python3 -m pip install --user -r requirements.txt
-                    '''
-                }
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} 'cd ${CODE_PATH} && python3 -m pip install -r requirements.txt || true'
+                """
             }
         }
 
         stage('Run Pytest') {
             steps {
-                dir('code/code_final') {
-                    sh '''
-                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export HADOOP_CONF_DIR=/etc/hadoop/conf
-                        export SPARK_CONF_DIR=/etc/spark/conf
-                        export SPARK_LOCAL_IP=127.0.0.1
-                        export PYSPARK_PYTHON=python3
-                        export PYSPARK_DRIVER_PYTHON=python3
-                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
-
-                        java -version
-                        python3 -c "import pyspark; print(pyspark.__file__)"
-                        python3 -m pytest -v
-                    '''
-                }
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} 'cd ${CODE_PATH} && python3 -m pytest -v'
+                """
             }
         }
 
         stage('Debug Runtime Host') {
             steps {
-                sh '''
-                    echo "USER=$(whoami)"
-                    echo "HOST=$(hostname)"
-                    echo "PWD=$(pwd)"
-                    echo "PATH=$PATH"
-
-                    echo "Checking tool paths..."
-                    ls -l /opt/cloudera/parcels/CDH/bin/hdfs || true
-                    ls -l /opt/cloudera/parcels/CDH/bin/sqoop || true
-                    ls -l /opt/cloudera/parcels/CDH/bin/spark-submit || true
-
-                    echo "Which commands..."
-                    which hdfs || true
-                    which sqoop || true
-                    which spark-submit || true
-
-                    echo "HDFS file info..."
-                    file /opt/cloudera/parcels/CDH/bin/hdfs || true
-                    head -n 1 /opt/cloudera/parcels/CDH/bin/hdfs || true
-                '''
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} 'hostname && whoami && pwd && ls -l ${CODE_PATH}'
+                """
             }
         }
 
@@ -89,44 +51,34 @@ pipeline {
                 expression { params.LOAD_TYPE == 'FULL' }
             }
             steps {
-                sh '''
-                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export HADOOP_CONF_DIR=/etc/hadoop/conf
-                    export SPARK_CONF_DIR=/etc/spark/conf
-                    export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                    export HADOOP_CONF_DIR=${HADOOP_CONF_DIR} &&
+                    export YARN_CONF_DIR=${YARN_CONF_DIR} &&
+                    cd ${PROJECT_PATH} &&
 
-                    echo "Running on $(hostname) as $(whoami)"
-                    ls -l /opt/cloudera/parcels/CDH/bin/hdfs
-                    ls -l /opt/cloudera/parcels/CDH/bin/sqoop
+                    hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/races/full &&
+                    hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/results/full &&
+                    hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/drivers/full &&
+                    hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/constructors/full &&
 
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/races/full/
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/results/full/
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/drivers/full/
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/constructors/full/
+                    hdfs dfs -rm -f /tmp/anas_proj2/bronze/races/full/races_initial.csv || true &&
+                    hdfs dfs -rm -f /tmp/anas_proj2/bronze/results/full/results_initial.csv || true &&
 
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/
+                    hdfs dfs -put -f csv_files/full_load/races_initial.csv /tmp/anas_proj2/bronze/races/full/ &&
+                    hdfs dfs -put -f csv_files/full_load/results_initial.csv /tmp/anas_proj2/bronze/results/full/ &&
 
-                    /opt/cloudera/parcels/CDH/bin/sqoop import \
-                      --connect jdbc:postgresql://13.42.152.118:5432/testdb \
-                      --username admin \
-                      --password admin123 \
-                      --driver org.postgresql.Driver \
-                      --table anas.drivers_full_v \
-                      --target-dir /tmp/anas_proj2/bronze/drivers/full \
-                      --delete-target-dir \
-                      -m 1
+                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.drivers_full_v --target-dir /tmp/anas_proj2/bronze/drivers/full --delete-target-dir -m 1 &&
 
-                    /opt/cloudera/parcels/CDH/bin/sqoop import \
-                      --connect jdbc:postgresql://13.42.152.118:5432/testdb \
-                      --username admin \
-                      --password admin123 \
-                      --driver org.postgresql.Driver \
-                      --table anas.constructors_full_v \
-                      --target-dir /tmp/anas_proj2/bronze/constructors/full \
-                      --delete-target-dir \
-                      -m 1
-                '''
+                    sqoop import --connect jdbc:postgresql://13.42.152.118:5432/testdb --username admin --password admin123 --driver org.postgresql.Driver --table anas.constructors_full_v --target-dir /tmp/anas_proj2/bronze/constructors/full --delete-target-dir -m 1 &&
+
+                    hdfs dfs -ls /tmp/anas_proj2/bronze &&
+                    hdfs dfs -ls /tmp/anas_proj2/bronze/races/full &&
+                    hdfs dfs -ls /tmp/anas_proj2/bronze/results/full &&
+                    hdfs dfs -ls /tmp/anas_proj2/bronze/drivers/full &&
+                    hdfs dfs -ls /tmp/anas_proj2/bronze/constructors/full
+                '
+                """
             }
         }
 
@@ -135,17 +87,9 @@ pipeline {
                 expression { params.LOAD_TYPE == 'FULL' }
             }
             steps {
-                dir('code/code_final') {
-                    sh '''
-                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export HADOOP_CONF_DIR=/etc/hadoop/conf
-                        export SPARK_CONF_DIR=/etc/spark/conf
-                        export SPARK_LOCAL_IP=127.0.0.1
-                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
-
-                        /opt/cloudera/parcels/CDH/bin/spark-submit bronze_to_silver_full2.py
-                    '''
-                }
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} 'cd ${CODE_PATH} && export PYSPARK_PYTHON=/usr/bin/python3 && export HADOOP_CONF_DIR=${HADOOP_CONF_DIR} && export YARN_CONF_DIR=${YARN_CONF_DIR} && spark-submit --master yarn --deploy-mode client bronze_to_silver_full.py'
+                """
             }
         }
 
@@ -154,35 +98,42 @@ pipeline {
                 expression { params.LOAD_TYPE == 'INCREMENTAL' }
             }
             steps {
-                sh '''
-                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export HADOOP_CONF_DIR=/etc/hadoop/conf
-                    export SPARK_CONF_DIR=/etc/spark/conf
-                    export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                    export HADOOP_CONF_DIR=${HADOOP_CONF_DIR} &&
+                    export YARN_CONF_DIR=${YARN_CONF_DIR} &&
+                    cd ${PROJECT_PATH} &&
 
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/races/incremental/
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/results/incremental/
+                    hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/races/incremental &&
+                    hdfs dfs -mkdir -p /tmp/anas_proj2/bronze/results/incremental &&
 
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/
-                '''
+                    hdfs dfs -rm -f /tmp/anas_proj2/bronze/races/incremental/races_incremental.csv || true &&
+                    hdfs dfs -rm -f /tmp/anas_proj2/bronze/results/incremental/results_incremental.csv || true &&
+
+                    hdfs dfs -put -f csv_files/incremental_load/races_incremental.csv /tmp/anas_proj2/bronze/races/incremental/ &&
+                    hdfs dfs -put -f csv_files/incremental_load/results_incremental.csv /tmp/anas_proj2/bronze/results/incremental/ &&
+
+                    hdfs dfs -ls /tmp/anas_proj2/bronze/races/incremental &&
+                    hdfs dfs -ls /tmp/anas_proj2/bronze/results/incremental
+                '
+                """
             }
         }
 
-        stage('Validate Base Silver Exists') {
+        stage('Validate Base Silver Data') {
             when {
                 expression { params.LOAD_TYPE == 'INCREMENTAL' }
             }
             steps {
-                sh '''
-                    export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                    export HADOOP_CONF_DIR=/etc/hadoop/conf
-                    export SPARK_CONF_DIR=/etc/spark/conf
-                    export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
-
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -test -e /tmp/anas_proj2/silver/races || { echo "Base silver races not found. Run FULL load first."; exit 1; }
-                    /opt/cloudera/parcels/CDH/bin/hdfs dfs -test -e /tmp/anas_proj2/silver/results || { echo "Base silver results not found. Run FULL load first."; exit 1; }
-                '''
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                    export HADOOP_CONF_DIR=${HADOOP_CONF_DIR} &&
+                    export YARN_CONF_DIR=${YARN_CONF_DIR} &&
+                    hdfs dfs -ls /tmp/anas_proj2/silver &&
+                    hdfs dfs -ls /tmp/anas_proj2/silver/races &&
+                    hdfs dfs -ls /tmp/anas_proj2/silver/results
+                '
+                """
             }
         }
 
@@ -191,43 +142,102 @@ pipeline {
                 expression { params.LOAD_TYPE == 'INCREMENTAL' }
             }
             steps {
-                dir('code/code_final') {
-                    sh '''
-                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export HADOOP_CONF_DIR=/etc/hadoop/conf
-                        export SPARK_CONF_DIR=/etc/spark/conf
-                        export SPARK_LOCAL_IP=127.0.0.1
-                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
-
-                        /opt/cloudera/parcels/CDH/bin/spark-submit incremental_silver_merge2.py
-                    '''
-                }
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} 'cd ${CODE_PATH} && export PYSPARK_PYTHON=/usr/bin/python3 && export HADOOP_CONF_DIR=${HADOOP_CONF_DIR} && export YARN_CONF_DIR=${YARN_CONF_DIR} && spark-submit --master yarn --deploy-mode client incremental_silver_merge.py'
+                """
             }
         }
 
         stage('Refresh Gold') {
             steps {
-                dir('code/code_final') {
-                    sh '''
-                        export JAVA_HOME=/usr/java/jdk1.8.0_232-cloudera
-                        export HADOOP_CONF_DIR=/etc/hadoop/conf
-                        export SPARK_CONF_DIR=/etc/spark/conf
-                        export SPARK_LOCAL_IP=127.0.0.1
-                        export PATH=/opt/cloudera/parcels/CDH/bin:$JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} 'cd ${CODE_PATH} && export PYSPARK_PYTHON=/usr/bin/python3 && export HADOOP_CONF_DIR=${HADOOP_CONF_DIR} && export YARN_CONF_DIR=${YARN_CONF_DIR} && spark-submit --master yarn --deploy-mode client silver_to_gold.py'
+                """
+            }
+        }
 
-                        /opt/cloudera/parcels/CDH/bin/spark-submit silver_to_gold2.py
-                    '''
-                }
+        stage('Refresh Hive') {
+            steps {
+                sh """
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                    cat > /tmp/anas_proj2_refresh_hive.sql <<EOF
+CREATE DATABASE IF NOT EXISTS anas_proj2;
+
+DROP TABLE IF EXISTS anas_proj2.race_results;
+
+CREATE EXTERNAL TABLE anas_proj2.race_results (
+    resultid INT,
+    raceid INT,
+    race_name STRING,
+    round INT,
+    race_date DATE,
+    driverid INT,
+    driver_name STRING,
+    driver_nationality STRING,
+    constructorid INT,
+    constructor_name STRING,
+    constructor_nationality STRING,
+    grid INT,
+    position INT,
+    positionorder INT,
+    points DOUBLE,
+    laps INT,
+    fastestlap INT,
+    fastestlapspeed DOUBLE
+)
+PARTITIONED BY (year INT)
+STORED AS PARQUET
+LOCATION "/tmp/anas_proj2/gold/race_results";
+
+MSCK REPAIR TABLE anas_proj2.race_results;
+
+DROP TABLE IF EXISTS anas_proj2.driver_points_summary;
+CREATE TABLE anas_proj2.driver_points_summary AS
+SELECT
+    year,
+    driver_name,
+    SUM(points) AS total_points
+FROM anas_proj2.race_results
+GROUP BY year, driver_name;
+
+DROP TABLE IF EXISTS anas_proj2.constructor_points_summary;
+CREATE TABLE anas_proj2.constructor_points_summary AS
+SELECT
+    year,
+    constructor_name,
+    SUM(points) AS total_points
+FROM anas_proj2.race_results
+GROUP BY year, constructor_name;
+
+DROP TABLE IF EXISTS anas_proj2.race_winners_summary;
+CREATE TABLE anas_proj2.race_winners_summary AS
+SELECT
+    year,
+    race_name,
+    race_date,
+    driver_name,
+    constructor_name,
+    points
+FROM anas_proj2.race_results
+WHERE position = 1;
+EOF
+
+                    beeline -u "jdbc:hive2://ip-172-31-12-74.eu-west-2.compute.internal:10000/default" -n hive -f /tmp/anas_proj2_refresh_hive.sql
+                '
+                """
             }
         }
     }
 
     post {
         success {
-            echo 'Jenkins batch pipeline completed successfully.'
+            echo 'Pipeline executed successfully.'
         }
         failure {
-            echo 'Jenkins batch pipeline failed. Check console logs and pipeline log files.'
+            echo 'Pipeline failed. Check Jenkins console output.'
+        }
+        always {
+            echo "Build finished with LOAD_TYPE=${params.LOAD_TYPE}"
         }
     }
 }

@@ -1,0 +1,68 @@
+Using Spark's default log4j profile: org/apache/spark/log4j-defaults.properties
+26/03/28 16:22:27 INFO SparkContext: Running Spark version 3.2.4
+26/03/28 16:22:28 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/03/28 16:22:28 INFO ResourceUtils: ==============================================================
+26/03/28 16:22:28 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/03/28 16:22:28 INFO ResourceUtils: ==============================================================
+26/03/28 16:22:28 INFO SparkContext: Submitted application: bronze_to_silver_full
+26/03/28 16:22:28 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/03/28 16:22:28 INFO ResourceProfile: Limiting resource is cpu
+26/03/28 16:22:28 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/03/28 16:22:28 INFO SecurityManager: Changing view acls to: ec2-user
+26/03/28 16:22:28 INFO SecurityManager: Changing modify acls to: ec2-user
+26/03/28 16:22:28 INFO SecurityManager: Changing view acls groups to: 
+26/03/28 16:22:28 INFO SecurityManager: Changing modify acls groups to: 
+26/03/28 16:22:28 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(ec2-user); groups with view permissions: Set(); users  with modify permissions: Set(ec2-user); groups with modify permissions: Set()
+26/03/28 16:22:28 INFO Utils: Successfully started service 'sparkDriver' on port 34227.
+26/03/28 16:22:28 INFO SparkEnv: Registering MapOutputTracker
+26/03/28 16:22:28 INFO SparkEnv: Registering BlockManagerMaster
+26/03/28 16:22:28 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/03/28 16:22:28 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/03/28 16:22:28 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/03/28 16:22:28 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-ac372be9-6281-48c3-bdb0-8f547874bb4e
+26/03/28 16:22:28 INFO MemoryStore: MemoryStore started with capacity 366.3 MiB
+26/03/28 16:22:28 INFO SparkEnv: Registering OutputCommitCoordinator
+26/03/28 16:22:28 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/03/28 16:22:28 INFO SparkUI: Bound SparkUI to 0.0.0.0, and started at http://ip-172-31-3-85.eu-west-2.compute.internal:4040
+26/03/28 16:22:29 INFO Executor: Starting executor ID driver on host ip-172-31-3-85.eu-west-2.compute.internal
+26/03/28 16:22:29 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 37833.
+26/03/28 16:22:29 INFO NettyBlockTransferService: Server created on ip-172-31-3-85.eu-west-2.compute.internal:37833
+26/03/28 16:22:29 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/03/28 16:22:29 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, ip-172-31-3-85.eu-west-2.compute.internal, 37833, None)
+26/03/28 16:22:29 INFO BlockManagerMasterEndpoint: Registering block manager ip-172-31-3-85.eu-west-2.compute.internal:37833 with 366.3 MiB RAM, BlockManagerId(driver, ip-172-31-3-85.eu-west-2.compute.internal, 37833, None)
+26/03/28 16:22:29 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, ip-172-31-3-85.eu-west-2.compute.internal, 37833, None)
+26/03/28 16:22:29 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, ip-172-31-3-85.eu-west-2.compute.internal, 37833, None)
+/home/ec2-user/.local/lib/python3.6/site-packages/pyspark/python/lib/pyspark.zip/pyspark/context.py:238: FutureWarning: Python 3.6 support is deprecated in Spark 3.2.
+  FutureWarning
+26/03/28 16:22:29 INFO SharedState: Setting hive.metastore.warehouse.dir ('null') to the value of spark.sql.warehouse.dir.
+26/03/28 16:22:29 INFO SharedState: Warehouse path is 'file:/home/ec2-user/250226batch/Anasraj/f1_proj_v2/code/code_final/spark-warehouse'.
+2026-03-28 16:22:30,322 | INFO | bronze_to_silver_full | Starting full bronze to silver job
+2026-03-28 16:22:30,502 | ERROR | bronze_to_silver_full | Full bronze to silver job failed: Path does not exist: file:/tmp/anas_proj2/bronze/drivers/full
+Traceback (most recent call last):
+  File "/home/ec2-user/250226batch/Anasraj/f1_proj_v2/code/code_final/bronze_to_silver_full.py", line 17, in <module>
+    inferSchema=True
+  File "/home/ec2-user/.local/lib/python3.6/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/readwriter.py", line 410, in csv
+    return self._df(self._jreader.csv(self._spark._sc._jvm.PythonUtils.toSeq(path)))
+  File "/home/ec2-user/.local/lib/python3.6/site-packages/pyspark/python/lib/py4j-0.10.9.5-src.zip/py4j/java_gateway.py", line 1322, in __call__
+    answer, self.gateway_client, self.target_id, self.name)
+  File "/home/ec2-user/.local/lib/python3.6/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/utils.py", line 117, in deco
+    raise converted from None
+pyspark.sql.utils.AnalysisException: Path does not exist: file:/tmp/anas_proj2/bronze/drivers/full
+26/03/28 16:22:30 INFO SparkUI: Stopped Spark web UI at http://ip-172-31-3-85.eu-west-2.compute.internal:4040
+26/03/28 16:22:30 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+26/03/28 16:22:30 INFO MemoryStore: MemoryStore cleared
+26/03/28 16:22:30 INFO BlockManager: BlockManager stopped
+26/03/28 16:22:30 INFO BlockManagerMaster: BlockManagerMaster stopped
+26/03/28 16:22:30 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+26/03/28 16:22:30 INFO SparkContext: Successfully stopped SparkContext
+Traceback (most recent call last):
+  File "/home/ec2-user/250226batch/Anasraj/f1_proj_v2/code/code_final/bronze_to_silver_full.py", line 17, in <module>
+    inferSchema=True
+  File "/home/ec2-user/.local/lib/python3.6/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/readwriter.py", line 410, in csv
+  File "/home/ec2-user/.local/lib/python3.6/site-packages/pyspark/python/lib/py4j-0.10.9.5-src.zip/py4j/java_gateway.py", line 1322, in __call__
+  File "/home/ec2-user/.local/lib/python3.6/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/utils.py", line 117, in deco
+pyspark.sql.utils.AnalysisException: Path does not exist: file:/tmp/anas_proj2/bronze/drivers/full
+26/03/28 16:22:30 INFO ShutdownHookManager: Shutdown hook called
+26/03/28 16:22:30 INFO ShutdownHookManager: Deleting directory /tmp/spark-adbc9e20-1987-4d9e-8e88-5ddacf5717cd
+26/03/28 16:22:30 INFO ShutdownHookManager: Deleting directory /tmp/spark-379a1f22-d520-448f-986c-005dbfc1247b
+26/03/28 16:22:30 INFO ShutdownHookManager: Deleting directory /tmp/spark-379a1f22-d520-448f-986c-005dbfc1247b/pyspark-b8bcc865-f8b2-4e5f-b92a-4fb4931fb869

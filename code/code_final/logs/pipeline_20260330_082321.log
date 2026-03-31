@@ -1,0 +1,8 @@
+2026-03-30 08:23:34,492 | INFO | silver_to_gold | Starting silver to gold job
+2026-03-30 08:23:43,917 | INFO | silver_to_gold | Drivers silver count: 861
+2026-03-30 08:23:44,062 | INFO | silver_to_gold | Constructors silver count: 212
+2026-03-30 08:23:45,312 | INFO | silver_to_gold | Races silver count: 901
+2026-03-30 08:23:45,688 | INFO | silver_to_gold | Results silver count: 22221
+2026-03-30 08:23:47,547 | INFO | silver_to_gold | Gold race_results count: 22221
+2026-03-30 08:23:47,548 | INFO | silver_to_gold | Writing gold race_results partitioned by year
+2026-03-30 08:23:50,841 | INFO | silver_to_gold | Silver to gold job completed successfully

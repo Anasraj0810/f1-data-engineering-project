@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Pytest
+.pytest_cache/
+
+# Logs
+logs/
+*.log
+
+# Virtual envs
+venv/
+.venv/
+env/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

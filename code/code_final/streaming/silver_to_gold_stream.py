@@ -32,7 +32,7 @@ def main():
             F.min("milliseconds").alias("fastest_lap_ms"),
             F.avg("milliseconds").alias("avg_lap_ms"),
             F.max("lap").alias("latest_lap"),
-            F.max("event_ts").alias("last_event_ts")
+            F.max("kafka_ts").alias("last_event_ts")
         )
         .withColumn("avg_lap_ms", F.round(F.col("avg_lap_ms"), 2))
         .withColumn("ingest_date", F.to_date("last_event_ts"))
@@ -54,4 +54,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()[D[C[D

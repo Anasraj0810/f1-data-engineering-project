@@ -26,15 +26,14 @@ def main():
     logger.info("Bronze row count: %s", df.count())
 
     df_clean = (
-        df.select(
-            F.col("raceid").cast("int").alias("raceid"),
-            F.col("driverid").cast("int").alias("driverid"),
-            F.col("lap").cast("int").alias("lap"),
-            F.col("position").cast("int").alias("position"),
-            F.trim(F.col("lap_time")).alias("lap_time"),
-            F.col("milliseconds").cast("int").alias("milliseconds"),
-            F.col("event_ts").alias("event_ts")
-        )
+        df
+        .withColumn("raceid", F.col("raceid").cast("int"))
+        .withColumn("driverid", F.col("driverid").cast("int"))
+        .withColumn("lap", F.col("lap").cast("int"))
+        .withColumn("position", F.col("position").cast("int"))
+        .withColumn("lap_time", F.trim(F.col("lap_time")))
+        .withColumn("milliseconds", F.col("milliseconds").cast("int"))
+        .withColumn("kafka_ts", F.col("kafka_ts"))
         .filter(
             F.col("raceid").isNotNull() &
             F.col("driverid").isNotNull() &
@@ -42,7 +41,17 @@ def main():
         )
         .filter(F.col("milliseconds").isNotNull())
         .dropDuplicates(["raceid", "driverid", "lap"])
-        .withColumn("ingest_date", F.to_date("event_ts"))
+        .withColumn("ingest_date", F.to_date("kafka_ts"))
+        .select(
+            "raceid",
+            "driverid",
+            "lap",
+            "position",
+            "lap_time",
+            "milliseconds",
+            "kafka_ts",
+            "ingest_date"
+        )
     )
 
     logger.info("Silver cleaned row count: %s", df_clean.count())
